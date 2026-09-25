@@ -21,13 +21,28 @@ local function chunk_targets(pos)
   return targets
 end
 
+local function draw_map_radius(entity)
+  if not settings.global["aps-show-on-map"].value then return end
+  local r = math.max(RADIUS, 1)
+  rendering.draw_circle({
+    target = entity, surface = entity.surface, radius = r, render_mode = "chart",
+    color = { 0.1, 0.35, 0.18, 0.15 }, filled = true, draw_on_ground = true,
+  })
+  rendering.draw_circle({
+    target = entity, surface = entity.surface, radius = r, render_mode = "chart",
+    color = { 0.35, 1, 0.55, 0.9 }, width = 2,
+  })
+end
+
 local function register(entity)
   if entity and entity.valid and entity.name == NAME then
     storage.purifiers[entity.unit_number] = { entity = entity, targets = chunk_targets(entity.position) }
+    draw_map_radius(entity)
   end
 end
 
 local function rescan()
+  rendering.clear(script.mod_name)
   storage.purifiers = {}
   storage.cursor = nil
   for _, surface in pairs(game.surfaces) do
@@ -88,6 +103,10 @@ end
 
 script.on_init(rescan)
 script.on_configuration_changed(rescan)
+
+script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
+  if event.setting == "aps-show-on-map" then rescan() end
+end)
 
 local filter = { { filter = "name", name = NAME } }
 local function on_built(event) register(event.entity or event.destination) end

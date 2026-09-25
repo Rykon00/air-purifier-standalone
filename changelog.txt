@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.3.0
+Date: 2026-09-25
+  Features:
+    - Absorption radius is drawn on the minimap and map view (can be turned off in the map settings).
+  Changes:
+    - Radius circle in the world is more visible.
+---------------------------------------------------------------------------------------------------
 Version: 1.2.0
 Date: 2026-09-25
   Features:
