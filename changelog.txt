@@ -1,0 +1,5 @@
+---------------------------------------------------------------------------------------------------
+Version: 1.0.0
+Date: 2026-09-25
+  Features:
+    - Initial release: Krastorio 2 air purifier ported to vanilla (no K2 dependency except Krastorio2Assets).
