@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.5.0
+Date: 2026-09-25
+  Changes:
+    - Map display now shows the cleaned chunks (union of all purifiers) instead of stacked circles, so overlapping purifiers no longer get brighter.
+    - Lighter fill for the in-world radius circle.
+---------------------------------------------------------------------------------------------------
 Version: 1.4.0
 Date: 2026-09-25
   Features:
