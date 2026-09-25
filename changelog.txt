@@ -1,5 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.1.0
+Date: 2026-09-25
+  Features:
+    - Graphics and sound bundled, Krastorio2Assets is no longer required.
+    - Configurable absorption radius and rate (runtime mod settings).
+---------------------------------------------------------------------------------------------------
 Version: 1.0.0
 Date: 2026-09-25
   Features:
-    - Initial release: Krastorio 2 air purifier ported to vanilla (no K2 dependency except Krastorio2Assets).
+    - Initial release: Krastorio 2 air purifier ported to vanilla.

@@ -1,8 +1,9 @@
+-- Graphics/sound: Krastorio2Assets (LGPL-3.0 / sounds MIT).
 -- Derived from Krastorio 2 (https://codeberg.org/raiguard/Krastorio2), LGPL-3.0.
 -- Prototype names keep the "kr-" prefix so kr-air-purifier-helper works with this mod.
 local hit_effects = require("__base__.prototypes.entity.hit-effects")
 local sounds = require("__base__.prototypes.entity.sounds")
-local A = "__Krastorio2Assets__"
+local A = "__air-purifier-standalone__"
 
 local connector = {
   variation = 30,
@@ -18,7 +19,7 @@ data:extend({
   {
     type = "item",
     name = "kr-air-purifier",
-    icon = A .. "/icons/entities/air-purifier.png",
+    icon = A .. "/graphics/icons/air-purifier.png",
     subgroup = "production-machine",
     order = "z[air-purifier]",
     place_result = "kr-air-purifier",
@@ -27,7 +28,7 @@ data:extend({
   {
     type = "item",
     name = "kr-pollution-filter",
-    icon = A .. "/icons/items/pollution-filter.png",
+    icon = A .. "/graphics/icons/pollution-filter.png",
     subgroup = "intermediate-product",
     order = "w2-a1[pollution-filter]",
     stack_size = 50,
@@ -35,7 +36,7 @@ data:extend({
   {
     type = "item",
     name = "kr-used-pollution-filter",
-    icon = A .. "/icons/items/used-pollution-filter.png",
+    icon = A .. "/graphics/icons/used-pollution-filter.png",
     subgroup = "intermediate-product",
     order = "w2-a2[used-pollution-filter]",
     stack_size = 50,
@@ -72,7 +73,7 @@ data:extend({
   {
     type = "recipe",
     name = "kr-restore-used-pollution-filter",
-    icon = A .. "/icons/recipes/restore-used-pollution-filter.png",
+    icon = A .. "/graphics/icons/restore-used-pollution-filter.png",
     icon_size = 128,
     subgroup = "intermediate-product",
     order = "w3-a[restore-used-pollution-filter]",
@@ -90,7 +91,7 @@ data:extend({
   {
     type = "recipe",
     name = "kr-air-cleaning",
-    icon = A .. "/icons/recipes/filtering.png",
+    icon = A .. "/graphics/icons/filtering.png",
     subgroup = "raw-material",
     order = "zz[air-cleaning]",
     enabled = false,
@@ -108,7 +109,7 @@ data:extend({
   {
     type = "technology",
     name = "kr-air-purification",
-    icon = A .. "/technologies/air-purifier.png",
+    icon = A .. "/graphics/technology-air-purifier.png",
     icon_size = 256,
     prerequisites = { "chemical-science-pack", "engine" },
     unit = {
@@ -132,7 +133,7 @@ data:extend({
   {
     type = "furnace",
     name = "kr-air-purifier",
-    icon = A .. "/icons/entities/air-purifier.png",
+    icon = A .. "/graphics/icons/air-purifier.png",
     flags = { "placeable-neutral", "placeable-player", "player-creation" },
     minable = { mining_time = 0.5, result = "kr-air-purifier" },
     result_inventory_size = 1,
@@ -149,20 +150,20 @@ data:extend({
     energy_source = {
       type = "electric",
       usage_priority = "secondary-input",
-      emissions_per_minute = { pollution = -50 },
+      -- pollution is absorbed by control.lua (configurable radius)
     },
     energy_usage = "75kW",
     open_sound = sounds.machine_open,
     close_sound = sounds.machine_close,
     working_sound = {
-      sound = { filename = A .. "/sounds/buildings/air-purifier.ogg" },
+      sound = { filename = A .. "/sound/air-purifier.ogg" },
       idle_sound = { filename = "__base__/sound/idle1.ogg" },
     },
     graphics_set = {
       animation = {
         layers = {
           {
-            filename = A .. "/buildings/air-purifier/air-purifier.png",
+            filename = A .. "/graphics/entity/air-purifier.png",
             priority = "high",
             width = 150,
             height = 150,
@@ -173,7 +174,7 @@ data:extend({
             scale = 0.5,
           },
           {
-            filename = A .. "/buildings/air-purifier/air-purifier-sh.png",
+            filename = A .. "/graphics/entity/air-purifier-sh.png",
             priority = "high",
             width = 164,
             height = 102,
@@ -187,7 +188,7 @@ data:extend({
       },
       water_reflection = {
         pictures = {
-          filename = A .. "/buildings/air-purifier/air-purifier-reflection.png",
+          filename = A .. "/graphics/entity/air-purifier-reflection.png",
           priority = "extra-high",
           width = 20,
           height = 25,
