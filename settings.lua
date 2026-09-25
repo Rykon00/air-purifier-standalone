@@ -17,11 +17,4 @@ data:extend({
     maximum_value = 10000,
     order = "b",
   },
-  {
-    type = "bool-setting",
-    name = "aps-show-on-map",
-    setting_type = "runtime-global",
-    default_value = true,
-    order = "c",
-  },
 })

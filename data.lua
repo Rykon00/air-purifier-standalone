@@ -216,4 +216,24 @@ data:extend({
       { connector, connector, connector, connector }
     ),
   },
+
+  -- Map radius toggle (shortcut bar button + hotkey), per player
+  {
+    type = "custom-input",
+    name = "aps-toggle-map-radius",
+    key_sequence = "SHIFT + ALT + P",
+    action = "lua",
+  },
+  {
+    type = "shortcut",
+    name = "aps-toggle-map-radius",
+    order = "z[aps-toggle-map-radius]",
+    action = "lua",
+    toggleable = true,
+    associated_control_input = "aps-toggle-map-radius",
+    icon = A .. "/graphics/icons/air-purifier.png",
+    icon_size = 64,
+    small_icon = A .. "/graphics/icons/air-purifier.png",
+    small_icon_size = 64,
+  },
 })

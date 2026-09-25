@@ -21,27 +21,70 @@ local function chunk_targets(pos)
   return targets
 end
 
-local function draw_map_radius(entity)
-  if not settings.global["aps-show-on-map"].value then return end
+-- per-player visibility of the map circles (storage.map_on[player_index] = true)
+local function visible_players()
+  local list = {}
+  for index, on in pairs(storage.map_on) do
+    local player = game.get_player(index)
+    if on and player and player.valid then list[#list + 1] = player end
+  end
+  return list
+end
+
+local function apply_visibility(objects, list)
+  for _, obj in pairs(objects) do
+    if obj.valid then
+      if #list == 0 then
+        obj.visible = false
+      else
+        obj.players = list
+        obj.visible = true
+      end
+    end
+  end
+end
+
+local function draw_map_radius(entity, list)
   local r = math.max(RADIUS, 1)
-  rendering.draw_circle({
-    target = entity, surface = entity.surface, radius = r, render_mode = "chart",
-    color = { 0.1, 0.35, 0.18, 0.15 }, filled = true, draw_on_ground = true,
-  })
-  rendering.draw_circle({
-    target = entity, surface = entity.surface, radius = r, render_mode = "chart",
-    color = { 0.35, 1, 0.55, 0.9 }, width = 2,
-  })
+  local objects = {
+    rendering.draw_circle({
+      target = entity, surface = entity.surface, radius = r, render_mode = "chart",
+      color = { 0.1, 0.35, 0.18, 0.15 }, filled = true, draw_on_ground = true,
+    }),
+    rendering.draw_circle({
+      target = entity, surface = entity.surface, radius = r, render_mode = "chart",
+      color = { 0.35, 1, 0.55, 0.9 }, width = 2,
+    }),
+  }
+  apply_visibility(objects, list or visible_players())
+  return objects
+end
+
+local function refresh_visibility()
+  local list = visible_players()
+  for _, data in pairs(storage.purifiers) do apply_visibility(data.renders, list) end
 end
 
 local function register(entity)
   if entity and entity.valid and entity.name == NAME then
-    storage.purifiers[entity.unit_number] = { entity = entity, targets = chunk_targets(entity.position) }
-    draw_map_radius(entity)
+    storage.purifiers[entity.unit_number] = {
+      entity = entity,
+      targets = chunk_targets(entity.position),
+      renders = draw_map_radius(entity),
+    }
+  end
+end
+
+local function init_players()
+  storage.map_on = storage.map_on or {}
+  for _, player in pairs(game.players) do
+    if storage.map_on[player.index] == nil then storage.map_on[player.index] = true end
+    player.set_shortcut_toggled("aps-toggle-map-radius", storage.map_on[player.index])
   end
 end
 
 local function rescan()
+  init_players()
   rendering.clear(script.mod_name)
   storage.purifiers = {}
   storage.cursor = nil
@@ -104,8 +147,24 @@ end
 script.on_init(rescan)
 script.on_configuration_changed(rescan)
 
-script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
-  if event.setting == "aps-show-on-map" then rescan() end
+local function toggle(player_index)
+  local player = game.get_player(player_index)
+  if not player then return end
+  local on = not storage.map_on[player_index]
+  storage.map_on[player_index] = on
+  player.set_shortcut_toggled("aps-toggle-map-radius", on)
+  refresh_visibility()
+end
+
+script.on_event("aps-toggle-map-radius", function(event) toggle(event.player_index) end)
+script.on_event(defines.events.on_lua_shortcut, function(event)
+  if event.prototype_name == "aps-toggle-map-radius" then toggle(event.player_index) end
+end)
+script.on_event(defines.events.on_player_created, function(event)
+  storage.map_on[event.player_index] = true
+  local player = game.get_player(event.player_index)
+  player.set_shortcut_toggled("aps-toggle-map-radius", true)
+  refresh_visibility()
 end)
 
 local filter = { { filter = "name", name = NAME } }
