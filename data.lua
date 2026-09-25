@@ -146,6 +146,16 @@ data:extend({
     selection_box = { { -0.9, -0.9 }, { 0.9, 0.9 } },
     crafting_categories = { "kr-air-purification" },
     show_recipe_icon = false,
+    radius_visualisation_specification = {
+      sprite = {
+        filename = A .. "/graphics/radius-visualization.png",
+        width = 512,
+        height = 512,
+      },
+      distance = math.max(settings.startup["aps-radius"].value, 1),
+      draw_in_cursor = true,
+      draw_on_selection = true,
+    },
     crafting_speed = 1.0,
     energy_source = {
       type = "electric",

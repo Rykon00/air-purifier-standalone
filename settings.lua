@@ -2,10 +2,10 @@ data:extend({
   {
     type = "int-setting",
     name = "aps-radius",
-    setting_type = "runtime-global",
-    default_value = 2,
+    setting_type = "startup",
+    default_value = 64,
     minimum_value = 0,
-    maximum_value = 16,
+    maximum_value = 512,
     order = "a",
   },
   {
