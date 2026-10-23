@@ -59,7 +59,7 @@ data:extend({
   {
     type = "recipe",
     name = "kr-pollution-filter",
-    category = "chemistry",
+    categories = { "chemistry" },
     enabled = false,
     energy_required = 10,
     ingredients = {
@@ -77,7 +77,7 @@ data:extend({
     icon_size = 128,
     subgroup = "intermediate-product",
     order = "w3-a[restore-used-pollution-filter]",
-    category = "chemistry",
+    categories = { "chemistry" },
     enabled = false,
     energy_required = 10,
     ingredients = {
@@ -96,11 +96,11 @@ data:extend({
     order = "zz[air-cleaning]",
     enabled = false,
     hide_from_player_crafting = true,
-    category = "kr-air-purification",
+    categories = { "kr-air-purification" },
     energy_required = 480,
     ingredients = { { type = "item", name = "kr-pollution-filter", amount = 1 } },
     results = {
-      { type = "item", name = "kr-used-pollution-filter", probability = 0.9, amount = 1 },
+      { type = "item", name = "kr-used-pollution-filter", independent_probability = 0.9, amount = 1 },
     },
     auto_recycle = false,
   },
