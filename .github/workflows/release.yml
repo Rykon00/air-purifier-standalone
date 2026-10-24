@@ -1,0 +1,61 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+env:
+  LOAD_CHECK_MODES: "plain space-age"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check tag, info.json version and changelog
+        run: python3 tools/build.py --check-release "${{ github.event.release.tag_name }}"
+
+      - name: Build the mod zip
+        id: build
+        run: echo "zip=$(python3 tools/build.py)" >> "$GITHUB_OUTPUT"
+
+      - name: Load check against the latest stable headless Factorio
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/factorio.tar.xz" https://factorio.com/get-download/stable/headless/linux64
+          tar -xJf "$RUNNER_TEMP/factorio.tar.xz" -C "$RUNNER_TEMP"
+          modes=""
+          for m in $LOAD_CHECK_MODES; do modes="$modes --mode $m"; done
+          python3 tools/load_check.py --factorio "$RUNNER_TEMP/factorio/bin/x64/factorio" \
+            --zip "${{ steps.build.outputs.zip }}" $modes --work "$RUNNER_TEMP/load-check"
+
+      - name: Attach the zip to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" "${{ steps.build.outputs.zip }}" --clobber
+
+      - name: Upload to the Factorio mod portal
+        env:
+          FACTORIO_API_KEY: ${{ secrets.FACTORIO_API_KEY }}
+          ZIP: ${{ steps.build.outputs.zip }}
+        run: |
+          if [ -z "$FACTORIO_API_KEY" ]; then
+            echo "::error::Repository secret FACTORIO_API_KEY is not set."
+            exit 1
+          fi
+          mod=$(python3 -c 'import json; print(json.load(open("info.json"))["name"])')
+          init=$(curl -sS --fail-with-body -X POST \
+            -H "Authorization: Bearer $FACTORIO_API_KEY" \
+            -F "mod=$mod" \
+            https://mods.factorio.com/api/v2/mods/releases/init_upload) || { echo "init_upload failed: $init"; exit 1; }
+          upload_url=$(printf '%s' "$init" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("upload_url", ""))')
+          if [ -z "$upload_url" ]; then
+            echo "init_upload returned no upload_url: $init"
+            exit 1
+          fi
+          result=$(curl -sS --fail-with-body -X POST -F "file=@$ZIP" "$upload_url") || { echo "upload failed: $result"; exit 1; }
+          echo "$result"
+          printf '%s' "$result" | python3 -c 'import json,sys; sys.exit(0 if json.load(sys.stdin).get("success") else 1)'

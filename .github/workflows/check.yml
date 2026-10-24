@@ -1,0 +1,80 @@
+name: Load check
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "17 5 * * 1" # Mondays 05:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  # Runs of tools/load_check.py: "plain" = base only, "space-age" = with every built-in mod.
+  LOAD_CHECK_MODES: "plain space-age"
+  ISSUE_LABEL: load-check
+
+jobs:
+  load-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download the latest stable headless Factorio
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/factorio.tar.xz" https://factorio.com/get-download/stable/headless/linux64
+          tar -xJf "$RUNNER_TEMP/factorio.tar.xz" -C "$RUNNER_TEMP"
+          "$RUNNER_TEMP/factorio/bin/x64/factorio" --version
+
+      - name: Build the mod zip
+        id: build
+        run: echo "zip=$(python3 tools/build.py)" >> "$GITHUB_OUTPUT"
+
+      - name: Load check
+        id: check
+        continue-on-error: true
+        run: |
+          modes=""
+          for m in $LOAD_CHECK_MODES; do modes="$modes --mode $m"; done
+          python3 tools/load_check.py --factorio "$RUNNER_TEMP/factorio/bin/x64/factorio" \
+            --zip "${{ steps.build.outputs.zip }}" $modes \
+            --work "$RUNNER_TEMP/load-check" --summary "$RUNNER_TEMP/summary.md"
+
+      - name: Job summary
+        if: always()
+        run: cat "$RUNNER_TEMP/summary.md" >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Open an issue (weekly run)
+        if: >-
+          github.event_name == 'schedule' &&
+          (steps.check.outputs.newer_minor == 'true' || steps.check.outputs.failed == 'true' || steps.check.outcome == 'failure')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.check.outputs.factorio_version }}
+          MINOR: ${{ steps.check.outputs.factorio_minor }}
+          NEWER: ${{ steps.check.outputs.newer_minor }}
+        run: |
+          mod=$(python3 -c 'import json; print(json.load(open("info.json"))["name"])')
+          open=$(gh issue list --label "$ISSUE_LABEL" --state open --json number --jq length 2>/dev/null || echo 0)
+          if [ "$open" != "0" ]; then
+            echo "An issue with label $ISSUE_LABEL is already open, not opening another one."
+            exit 0
+          fi
+          if [ "$NEWER" = "true" ]; then
+            title="Factorio $MINOR released: port $mod"
+          else
+            title="Factorio ${VERSION:-latest}: $mod fails to load"
+          fi
+          {
+            cat "$RUNNER_TEMP/summary.md" 2>/dev/null || echo "The load check did not write a report."
+            echo
+            echo "Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          } > "$RUNNER_TEMP/issue.md"
+          gh label create "$ISSUE_LABEL" --color B60205 --description "Opened by the weekly load check" --force
+          gh issue create --title "$title" --label "$ISSUE_LABEL" --body-file "$RUNNER_TEMP/issue.md"
+
+      - name: Fail if the load check failed
+        if: steps.check.outcome == 'failure'
+        run: exit 1
