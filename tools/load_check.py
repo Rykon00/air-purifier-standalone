@@ -7,6 +7,10 @@ Usage:
 --mode plain      only base + the mod
 --mode space-age  base + every built-in mod of the install (space-age, quality, elevated-rails, ...) + the mod
 --data            the install's data folder (default: <binary>/../../data)
+--test-mod DIR    functional tests: DIR (a control.lua, optionally data.lua etc.) is loaded as an extra mod
+                  "<mod>-functional-test" (info.json is generated) in every mode, and the benchmark runs at
+                  least --test-ticks ticks. The test mod writes log lines "[functional-test] PASS|FAIL ..."
+                  and must end with "[functional-test] DONE"; any FAIL or a missing DONE fails the check.
 
 Writes <work>/<mode>/create.log and benchmark.log, and with --summary a Markdown report with the
 log excerpt of every failed run. In GitHub Actions it also sets the step outputs factorio_version,
@@ -61,7 +65,20 @@ def factorio_version(binary):
     return m.group(1)
 
 
-def check_mode(binary, data_dir, zip_path, mod, mode, work, ticks):
+TEST_TAG = "[functional-test]"
+
+
+def add_test_mod(mods_dir, test_dir, mod, minor):
+    name = mod["name"] + "-functional-test"
+    target = os.path.join(mods_dir, name + "_1.0.0")
+    shutil.copytree(test_dir, target)
+    with open(os.path.join(target, "info.json"), "w", encoding="utf-8") as fh:
+        json.dump({"name": name, "version": "1.0.0", "title": name, "author": mod.get("author", ""),
+                   "factorio_version": minor, "dependencies": [mod["name"]]}, fh, indent=2)
+    return name
+
+
+def check_mode(binary, data_dir, zip_path, mod, mode, work, ticks, test_dir=None, minor=None):
     """Returns (ok, problems, log text of the failed step)."""
     base = os.path.join(work, mode)
     shutil.rmtree(base, ignore_errors=True)
@@ -73,6 +90,8 @@ def check_mode(binary, data_dir, zip_path, mod, mode, work, ticks):
     if enabled and "space-age" not in builtins:
         return False, ["this Factorio install has no space-age mod"], ""
     mod_list = [{"name": "base", "enabled": True}, {"name": mod["name"], "enabled": True}]
+    if test_dir:
+        mod_list.append({"name": add_test_mod(mods_dir, test_dir, mod, minor), "enabled": True})
     mod_list += [{"name": b, "enabled": enabled} for b in builtins]
     with open(os.path.join(mods_dir, "mod-list.json"), "w", encoding="utf-8") as fh:
         json.dump({"mods": mod_list}, fh, indent=2)
@@ -94,6 +113,14 @@ def check_mode(binary, data_dir, zip_path, mod, mode, work, ticks):
             problems.append(f"{step}: mod {mod['name']} was not loaded")
         if step == "benchmark" and not re.search(r"Performed %d updates" % ticks, text):
             problems.append(f"benchmark: no 'Performed {ticks} updates' line")
+        if step == "benchmark" and test_dir:
+            fails = [l.strip() for l in text.splitlines() if TEST_TAG + " FAIL" in l]
+            passes = [l for l in text.splitlines() if TEST_TAG + " PASS" in l]
+            if fails:
+                problems.append(f"functional test: {len(fails)} failure(s), first: {fails[0]}")
+            if not any(TEST_TAG + " DONE" in l for l in text.splitlines()):
+                problems.append(f"functional test: no '{TEST_TAG} DONE' line (test did not finish in {ticks} ticks)")
+            print(f"    functional test: {len(passes)} passed, {len(fails)} failed")
         if problems:
             return False, problems, text
     return True, [], ""
@@ -108,6 +135,8 @@ def main():
     ap.add_argument("--ticks", type=int, default=600)
     ap.add_argument("--work", help="work folder (default: a temporary folder)")
     ap.add_argument("--summary", help="write a Markdown report here")
+    ap.add_argument("--test-mod", help="folder of the functional test mod (see above)")
+    ap.add_argument("--test-ticks", type=int, default=3600)
     args = ap.parse_args()
 
     binary = os.path.abspath(args.factorio)
@@ -129,7 +158,9 @@ def main():
         report += [f"Factorio {minor} is newer than the mod's factorio_version {mod_minor}.", ""]
     failed = False
     for mode in args.mode or ["plain"]:
-        ok, problems, text = check_mode(binary, data_dir, args.zip, mod, mode, work, args.ticks)
+        ticks = max(args.ticks, args.test_ticks) if args.test_mod else args.ticks
+        test_dir = os.path.abspath(args.test_mod) if args.test_mod else None
+        ok, problems, text = check_mode(binary, data_dir, args.zip, mod, mode, work, ticks, test_dir, minor)
         print(f"[{mode}] {'OK' if ok else 'FAILED'}")
         for p in problems:
             print("   ", p)

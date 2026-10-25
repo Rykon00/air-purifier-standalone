@@ -15,24 +15,38 @@ Factorio mod "Air Purifier (Standalone)" (portal: https://mods.factorio.com/mod/
 
 ```
 python tools/build.py                      # -> dist/air-purifier-standalone_<version>.zip
-python tools/load_check.py --factorio <path to factorio(.exe)> --zip dist/air-purifier-standalone_<version>.zip --mode plain --mode space-age
+python tools/load_check.py --factorio <path to factorio(.exe)> --zip dist/air-purifier-standalone_<version>.zip --mode plain --mode space-age --test-mod tests/functional-test
 ```
 
-`tools/build.py` packs everything except `.git*`, `.github/`, `tools/`, `dist/`, `CLAUDE.md`, `README.md` and editor
+`tools/build.py` packs everything except `.git*`, `.github/`, `tools/`, `tests/`, `dist/`, `CLAUDE.md`, `README.md` and editor
 folders. `tools/load_check.py` puts the zip into a fresh mod folder, enables it (with `--mode space-age` also every
 built-in mod: space-age, quality, elevated-rails, recycler), creates a map with `--create`, runs it with
 `--benchmark ... --benchmark-ticks 600` and fails on a non-zero exit code, an error line in the log, or when the mod
 was not loaded. `--data` points to the install's `data` folder when it is not `<binary>/../../data` (for example a
 copied Steam binary).
 
+Functional tests: `tests/functional-test/` is loaded by `--test-mod` as an extra mod
+`air-purifier-standalone-functional-test` (info.json generated). Three polluted chunks on lab tiles with diffusion off: 10 purifiers with filters must remove at least 60% of the
+configured absorption, 10 purifiers without filters nothing.
+It logs `[functional-test] PASS|FAIL ...` and `[functional-test] DONE`; any FAIL or a missing DONE fails the check.
+Extend it when the mod's behaviour changes: the automatic port only releases when these tests pass.
+
 ## CI
 
-- `check.yml`: on push, pull request, weekly and manually, against the latest stable headless Factorio for Linux.
-  On the weekly run it opens one issue (label `load-check`) when the load fails or a newer Factorio minor version
-  than `factorio_version` is out.
-- `release.yml`: on a published GitHub release. Checks tag = `v` + info.json version and a dated changelog section,
-  builds the zip, runs the load check, attaches the zip to the release and uploads it to the mod portal with the
-  repository secret `FACTORIO_API_KEY`.
+- `check.yml`: on push, pull request and manually: load check + functional tests against the latest stable headless
+  Factorio for Linux.
+- `port.yml`: weekly (Mondays) and manually (input `dry_run`). Same minor as `factorio_version`: load check, one issue
+  (label `load-check`) on failure. Newer minor: automatic port with `tools/port.py` (factorio_version and built-in
+  dependencies to the new minor, mod version minor bump, changelog section; an undated topmost section is released
+  with it). If load check and functional tests pass, it commits to main as github-actions[bot], tags `v<version>`,
+  creates the GitHub release and calls `release.yml`; otherwise one issue (label `auto-port`) and nothing is committed.
+- `release.yml`: on a published GitHub release, or called by `port.yml` with input `tag`. Checks tag = `v` + info.json
+  version and a dated changelog section, builds the zip, runs the load check, attaches the zip to the release and
+  uploads it to the mod portal with the repository secret `FACTORIO_API_KEY`. If the portal does not know the mod yet
+  (`UnknownMod`), it publishes it instead (Mod publish API: `init_publish`, with README.md up to "## Build" as
+  description, category and license from `PORTAL_CATEGORY`/`PORTAL_LICENSE` in the workflow and the repo as source
+  URL). The key needs the usages "ModPortal: Upload Mods" and "ModPortal: Publish Mods".
+- `tools/build.py --notes [VERSION]` prints a changelog section as Markdown (release notes).
 
 ## Release
 

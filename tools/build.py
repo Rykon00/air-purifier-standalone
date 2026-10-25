@@ -5,6 +5,8 @@ Usage:
   python tools/build.py [--out DIR]          build the zip (default: dist/), print its path
   python tools/build.py --check-release TAG  check TAG == "v" + info.json version and that
                                              changelog.txt has that version with a date
+  python tools/build.py --notes [VERSION]    print the changelog.txt section of VERSION (default: info.json
+                                             version) as Markdown release notes
 """
 import argparse
 import json
@@ -16,7 +18,7 @@ import zipfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Top-level entries that are not part of the mod (".git*" covers .git, .github, .gitignore, .gitattributes).
-EXCLUDE_TOP = {"tools", "dist", "CLAUDE.md", "README.md"}
+EXCLUDE_TOP = {"tools", "tests", "dist", "CLAUDE.md", "README.md"}
 # Editor folders, at any depth.
 EXCLUDE_DIRS = {".vscode", ".idea"}
 
@@ -75,13 +77,34 @@ def check_release(tag):
     return not errors
 
 
+def notes(version):
+    with open(os.path.join(ROOT, "changelog.txt"), encoding="utf-8") as fh:
+        changelog = fh.read().replace("\r\n", "\n")
+    m = re.search(r"^Version: " + re.escape(version) + r"[ \t]*\n(.*?)(?=^-{20,}|\Z)", changelog, re.S | re.M)
+    if not m:
+        sys.exit(f"changelog.txt has no section 'Version: {version}'")
+    out = []
+    for line in m.group(1).splitlines():
+        if line.startswith("Date:") or not line.strip():
+            continue
+        if re.match(r"^  \S.*:\s*$", line):
+            out.append(f"### {line.strip().rstrip(':')}")
+        else:
+            out.append(re.sub(r"^    - ", "- ", re.sub(r"^      ", "  ", line)))
+    return "\n".join(out)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=os.path.join(ROOT, "dist"))
     ap.add_argument("--check-release", metavar="TAG")
+    ap.add_argument("--notes", nargs="?", const="", metavar="VERSION")
     args = ap.parse_args()
     if args.check_release is not None:
         sys.exit(0 if check_release(args.check_release) else 1)
+    if args.notes is not None:
+        print(notes(args.notes or info()["version"]))
+        return
     print(build(args.out))
 
 
