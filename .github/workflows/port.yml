@@ -1,6 +1,6 @@
 name: Weekly check and auto-port
 
-# Weekly (and by hand) against the latest stable headless Factorio:
+# Weekly on Fridays (and by hand) against the latest stable headless Factorio:
 # - Same minor version as info.json's factorio_version: load check (+ functional tests in
 #   tests/functional-test); on failure one issue (label load-check).
 # - Newer minor version (e.g. 2.2 while the mod says 2.1): automatic port. tools/port.py sets
@@ -13,7 +13,9 @@ name: Weekly check and auto-port
 
 on:
   schedule:
-    - cron: "17 5 * * 1" # Mondays 05:17 UTC
+    # Fridays 15:00 German time (Factorio releases usually come out on Fridays).
+    - cron: "0 15 * * 5"
+      timezone: "Europe/Berlin"
   workflow_dispatch:
     inputs:
       dry_run:

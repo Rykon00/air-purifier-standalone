@@ -35,7 +35,7 @@ Extend it when the mod's behaviour changes: the automatic port only releases whe
 
 - `check.yml`: on push, pull request and manually: load check + functional tests against the latest stable headless
   Factorio for Linux.
-- `port.yml`: weekly (Mondays) and manually (input `dry_run`). Same minor as `factorio_version`: load check, one issue
+- `port.yml`: weekly (Fridays 15:00 Europe/Berlin) and manually (input `dry_run`). Same minor as `factorio_version`: load check, one issue
   (label `load-check`) on failure. Newer minor: automatic port with `tools/port.py` (factorio_version and built-in
   dependencies to the new minor, mod version minor bump, changelog section; an undated topmost section is released
   with it). If load check and functional tests pass, it commits to main as github-actions[bot], tags `v<version>`,
